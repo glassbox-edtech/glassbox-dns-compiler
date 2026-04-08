@@ -25,7 +25,7 @@ jobs:
         python-version: '3.x'
 
     - name: Run Baseline Generator
-      run: python generate_baseline.py
+      run: python generate_rules.py
 
     - name: Create Daily Release
       env:
