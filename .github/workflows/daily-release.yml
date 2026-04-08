@@ -1,0 +1,62 @@
+name: Daily DNS Baseline Builder
+
+on:
+  schedule:
+    # Runs at 12:00 PM (Noon) EDT / 16:00 UTC every day
+    - cron: '0 16 * * *'
+  workflow_dispatch: 
+    # This allows you to click a "Run workflow" button manually in the GitHub UI!
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    # Required to allow the default github-actions[bot] to create and delete releases
+    permissions:
+      contents: write 
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Run Baseline Generator
+      run: python generate_baseline.py
+
+    - name: Create Daily Release
+      env:
+        # Uses the temporary, automatic token provided by GitHub Actions
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TODAY=$(date +'%Y-%m-%d')
+        
+        echo "Creating new release for $TODAY..."
+        
+        # Create a release, uploading the dns_blocklist.txt file as an asset
+        gh release create "baseline-$TODAY" dns_blocklist.txt \
+          --title "DNS Baseline - $TODAY" \
+          --notes "Automated daily compilation of Layer 0 DNS blocklists."
+
+    - name: Prune Old Releases (Keep last 7 days)
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "Cleaning up old releases..."
+        
+        # 1. List all releases sorted by newest first
+        # 2. Skip the top 7 newest releases (tail -n +8)
+        # 3. Extract the release tags (awk '{print $1}')
+        # 4. Loop through and delete them
+        
+        gh release list --limit 100 | tail -n +8 | awk '{print $1}' | while read -r release; do
+          if [ -n "$release" ]; then
+            echo "Deleting old release: $release"
+            gh release delete "$release" --cleanup-tag -y
+          fi
+        done
+        
+        echo "Cleanup complete!"
