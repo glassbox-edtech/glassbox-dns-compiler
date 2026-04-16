@@ -29,18 +29,26 @@ jobs:
 
     - name: Create Daily Release
       env:
-        # Uses the temporary, automatic token provided by GitHub Actions
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         TODAY=$(date +'%Y-%m-%d')
         
+        # Define the direct download link using the /latest/ shortcut
+        LATEST_URL="https://github.com/${{ github.repository }}/releases/latest/download/dns_blocklist.txt"
+        
+        # Construct the release notes
+        NOTES="### 🛡️ Daily DNS Baseline Update
+        Automated daily compilation of Layer 0 DNS blocklists.
+        
+        **Latest Download URL:** \`$LATEST_URL\`
+        
+        *This release was automatically generated on $TODAY.*"
+
         echo "Creating new release for $TODAY..."
         
-        # Create a release, uploading the dns_blocklist.txt file as an asset
         gh release create "baseline-$TODAY" dns_blocklist.txt \
           --title "DNS Baseline - $TODAY" \
-          --notes "Automated daily compilation of Layer 0 DNS blocklists."
-
+          --notes "$NOTES"
     - name: Prune Old Releases (Keep last 7 days)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
