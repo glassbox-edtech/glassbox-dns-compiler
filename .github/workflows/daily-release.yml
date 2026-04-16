@@ -47,15 +47,14 @@ jobs:
       run: |
         echo "Cleaning up old releases..."
         
-        # 1. List all releases sorted by newest first
-        # 2. Skip the top 7 newest releases (tail -n +8)
-        # 3. Extract the release tags (awk '{print $1}')
-        # 4. Loop through and delete them
+        # 1. Get all release tags in JSON format
+        # 2. Use jq to skip the first 7 (newest) and grab the tagName of the rest
+        # 3. Use xargs to pass the full tag names (even with spaces) to the delete command
         
-        gh release list --limit 100 | tail -n +8 | awk '{print $1}' | while read -r release; do
-          if [ -n "$release" ]; then
-            echo "Deleting old release: $release"
-            gh release delete "$release" --cleanup-tag -y
+        gh release list --limit 100 --json tagName --jq '.[7:] | .[].tagName' | while read -r tag; do
+          if [ -n "$tag" ]; then
+            echo "Deleting old release: $tag"
+            gh release delete "$tag" --cleanup-tag -y
           fi
         done
         
